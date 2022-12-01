@@ -115,8 +115,8 @@ class Map
 
   void generate(int which)
   {
-    cellsWide = 800 / GRID_SIZE;
-    cellsTall = 600 / GRID_SIZE;
+    cellsWide = width / GRID_SIZE;
+    cellsTall = height / GRID_SIZE;
 
 
     walls.clear();
