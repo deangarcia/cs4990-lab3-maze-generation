@@ -1,4 +1,6 @@
 import java.util.Random;
+import java.util.Objects;
+import java.util.HashSet;
 
 class Wall
 {
@@ -34,6 +36,23 @@ class Wall
       circle(marker.x, marker.y, 5);
     }
   }
+   
+  @Override
+    boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    } else if (!this.getClass().equals(other.getClass())) {
+      return false;
+    } else {
+      Wall other_wall = (Wall) other;
+      return (this.start.equals(other_wall.start) && this.end.equals(other_wall.end)) || (this.start.equals(other_wall.end) && this.end.equals(other_wall.start));
+    }
+  }
+  
+  @Override
+  int hashCode() {
+    return Objects.hash(this.center()); // I recognize this is not a great way to do this, but for the moment it works.
+  }  
 }
 
 class Node
@@ -58,7 +77,7 @@ class Node
 
 class Map
 {
-  ArrayList<Wall> walls;
+  HashSet<Wall> walls;
   ArrayList<Node> nodes;
   ArrayList<ArrayList<Node>> map;
   int cellsWide;
@@ -67,7 +86,7 @@ class Map
   Map()
   {
 
-    walls = new ArrayList<Wall>();
+    walls = new HashSet<Wall>();
     nodes = new ArrayList<Node>();
   }
 
@@ -103,6 +122,11 @@ class Map
         PVector nodeCenter = new PVector(adjustedColPos + centerOffset, adjustedRowPos + centerOffset);
         map.get(row).add(new Node(nodeCenter));
         
+        // Add the walls, hashset will prevent duplicates
+        walls.add(new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos)));
+        walls.add(new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE)));
+        walls.add(new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos)));
+        walls.add(new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE)));
       }
     }
 
@@ -143,5 +167,6 @@ class Map
     for (Wall wall : walls) {
        wall.draw(); 
     }
+    println(walls.size());
   }
 }
