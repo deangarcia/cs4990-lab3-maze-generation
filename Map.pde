@@ -292,7 +292,26 @@ class Map
       temp = previous.get(temp);
     }
     Collections.reverse(waypoints);
-    return waypoints;
+    return minimizePath(waypoints);
+  }
+
+  ArrayList<PVector> minimizePath(ArrayList<PVector> path) {
+    ArrayList<PVector> prunedPath = new ArrayList<>();
+    prunedPath.add(path.get(0));
+    if (path.size() > 2) {
+      for (int i = 1; i < path.size() - 1; i++) {
+        PVector prev = path.get(i - 1);
+        PVector curr = path.get(i);
+        PVector next = path.get(i + 1);
+
+
+        if (!(Float.valueOf(prev.x).equals(curr.x) && Float.valueOf(curr.x).equals(next.x)) && !(Float.valueOf(prev.y).equals(curr.y) && Float.valueOf(curr.y).equals(next.y))) {
+          prunedPath.add(curr);
+        }
+      }
+    }
+    prunedPath.add(path.get(path.size() - 1));
+    return prunedPath;
   }
 
   void update(float dt)
