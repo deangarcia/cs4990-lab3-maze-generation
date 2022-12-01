@@ -6,6 +6,9 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Comparator;
+import java.util.Collections;
 
 class Wall
 {
@@ -81,11 +84,11 @@ static class Node
   public void addNeighbor(Node neighbor) {
     neighbors.add(neighbor);
   }
-  
+
   // Have two nodes add each other as neighbors
   static void associate(Node a, Node b) {
-     a.addNeighbor(b);
-     b.addNeighbor(a);
+    a.addNeighbor(b);
+    b.addNeighbor(a);
   }
 
   public ArrayList<Wall> getWalls() {
@@ -148,14 +151,14 @@ class Map
         Wall left = new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE));
         Wall right = new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos));
         Wall down = new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE));
-        
-        
+
+
         walls.addAll(new ArrayList<>(Arrays.asList(up, left, right, down))); // Add the walls, hashset will prevent duplicates
 
         Node newNode = new Node(nodeCenter, new ArrayList<>(Arrays.asList(up, left, right, down))); // Create node and tell it which walls it has
 
         map.get(row).add(newNode); // Add node to map
-        
+
         coordsToNode.put(nodeCenter, newNode); // Add node to hashmap
       }
     }
@@ -164,7 +167,7 @@ class Map
     /*
      Maze Generation using Prim's Algorithm
      */
-    
+
     // Setup start node
     Node startNode = map.get(rand.nextInt(cellsTall)).get(rand.nextInt(cellsWide));  // The node we will start with
     startNode.visit();                                                               // Declare our start node visited
@@ -188,7 +191,7 @@ class Map
       wallFrontier.addAll(freshlyVisitedNode.getWalls());      // Add the new node's walls to frontier
       wallFrontier.remove(chosenWall); // Remove the wall we came from. Because wallFrontier is a set, we don't have to worry about the wall we added above being duplicate
       walls.remove(chosenWall);  // Remove the wall from our map
-      
+
       Node.associate(wallNeighbors.get(0), wallNeighbors.get(1));  // Associate the nodes to each other now that the wall is gone
     }
   }
@@ -241,6 +244,57 @@ class Map
     return prunedWalls;
   }
 
+  Node getRandomNode() {
+    return map.get(rand.nextInt(cellsTall)).get(rand.nextInt(cellsWide));
+  }
+
+  Node getNode(int i, int j) {
+    i = constrain(i, 0, cellsTall - 1);
+    j = constrain(j, 0, cellsWide - 1);
+    return map.get(i).get(j);
+  }
+
+  Node getNodeClosestToPoint(PVector point) {
+    return map.stream().flatMap(row -> row.stream()).sorted((n1, n2) -> Float.valueOf(PVector.dist(n1.center, point)).compareTo(PVector.dist(n2.center, point))).collect(Collectors.toList()).get(0);
+  }
+
+  ArrayList<PVector> aStar(Node start, Node goal) {
+    HashMap<Node, Float> costs = new HashMap<>();
+    costs.put(start, 0.0);
+    HashMap<Node, Node> previous = new HashMap<>();
+    PriorityQueue<QueueItem> queue = new PriorityQueue<QueueItem>(new QueueItemComparator());
+    queue.add(new QueueItem(start, 0, 0 + PVector.dist(start.center, goal.center)));
+
+    while (queue.size() > 0) {
+      QueueItem curr_qi = queue.poll();
+      Node curr_node = curr_qi.node;
+      if (curr_node.center.equals(goal.center)) {
+        break;
+      } else {
+        for (Node neighbor : curr_node.neighbors) {
+          Float new_neighbor_weight = costs.get(curr_node) + 1;
+
+          if (!costs.containsKey(neighbor) || new_neighbor_weight < costs.get(neighbor)) {
+            costs.put(neighbor, new_neighbor_weight);
+            previous.put(neighbor, curr_node);
+            queue.add(new QueueItem(neighbor, 1, 1 + PVector.dist(neighbor.center, goal.center)));
+          }
+        }
+      }
+    }
+
+
+    ArrayList<PVector> waypoints = new ArrayList<PVector>();
+    waypoints.add(goal.center);
+    Node temp = goal;
+    while (temp != start) {
+      waypoints.add(previous.get(temp).center);
+      temp = previous.get(temp);
+    }
+    Collections.reverse(waypoints);
+    return waypoints;
+  }
+
   void update(float dt)
   {
     draw();
@@ -255,21 +309,38 @@ class Map
       w.draw();
     }
 
-    stroke(255, 0, 0);
     //for (ArrayList<Node> row : map) {
     //  for (Node n : row) {
     //    circle(n.center.x, n.center.y, 10);
     //  }
     //}
-    
-    stroke(255, 0, 0);
-    for(Node n : map.stream().flatMap(row -> row.stream()).collect(Collectors.toList())){
-        circle(n.center.x, n.center.y, 5);
-        for(Node neighbor : n.neighbors) {
-            line(n.center.x, n.center.y, neighbor.center.x, neighbor.center.y);
-        }
+  }
+}
+
+class QueueItem {
+  Node node;
+  float base_value;
+  float heuristic_value;
+
+  QueueItem(Node n, float bv, float hv) {
+    this.node = n;
+    this.base_value = bv;
+    this.heuristic_value = hv;
+  }
+
+  float getSumValue() {
+    return base_value + heuristic_value;
+  }
+}
+
+class QueueItemComparator implements Comparator<QueueItem> {
+  public int compare(QueueItem q1, QueueItem q2) {
+    if (q1.getSumValue() < q2.getSumValue()) {
+      return -1;
+    } else if (q1.getSumValue() > q2.getSumValue()) {
+      return 1;
     }
 
-
+    return 0;
   }
 }
