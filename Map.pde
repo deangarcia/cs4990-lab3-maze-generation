@@ -1,6 +1,11 @@
-import java.util.Random;
+import java.util.Random; //<>// //<>//
 import java.util.Objects;
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.List;
 
 class Wall
 {
@@ -36,7 +41,8 @@ class Wall
       circle(marker.x, marker.y, 5);
     }
   }
-   
+
+  // The equals and hashCode methods are taken from Lab1 for the use of a HashSet
   @Override
     boolean equals(Object other) {
     if (this == other) {
@@ -48,29 +54,42 @@ class Wall
       return (this.start.equals(other_wall.start) && this.end.equals(other_wall.end)) || (this.start.equals(other_wall.end) && this.end.equals(other_wall.start));
     }
   }
-  
+
   @Override
-  int hashCode() {
-    return Objects.hash(this.center()); // I recognize this is not a great way to do this, but for the moment it works.
-  }  
+    int hashCode() {
+    return Objects.hash(this.center());
+  }
 }
 
-class Node
+static class Node
 {
   PVector center;
   boolean visited = false;
   ArrayList<Node> neighbors = new ArrayList<Node>();
+  ArrayList<Wall> walls = new ArrayList<>();
 
-  Node(PVector center) {
+  Node(PVector center, ArrayList<Wall> walls) {
     this.center = center;
+    this.walls = walls;
   }
 
   public void visit() {
     this.visited = true;
   }
 
+  // Add another node to this nodes neighbor list
   public void addNeighbor(Node neighbor) {
     neighbors.add(neighbor);
+  }
+  
+  // Have two nodes add each other as neighbors
+  static void associate(Node a, Node b) {
+     a.addNeighbor(b);
+     b.addNeighbor(a);
+  }
+
+  public ArrayList<Wall> getWalls() {
+    return this.walls;
   }
 }
 
@@ -82,12 +101,14 @@ class Map
   ArrayList<ArrayList<Node>> map;
   int cellsWide;
   int cellsTall;
+  HashMap<PVector, Node> coordsToNode;  // Hashmap that can be used to find a node from it's center position
 
   Map()
   {
 
     walls = new HashSet<Wall>();
     nodes = new ArrayList<Node>();
+    coordsToNode = new HashMap<PVector, Node>();
   }
 
 
@@ -96,7 +117,6 @@ class Map
   {
     cellsWide = 800 / GRID_SIZE;
     cellsTall = 600 / GRID_SIZE;
-    println(cellsWide + " by " + cellsTall);
 
 
     walls.clear();
@@ -104,9 +124,11 @@ class Map
     Random rand = new Random(which);
 
     /**
-      Initialize Node Map
-    **/
+     Initialize Node Map
+     **/
     map = new ArrayList<ArrayList<Node>>();
+    coordsToNode = new HashMap<PVector, Node>();
+    walls = new HashSet<Wall>();
 
     // Initialize map to the correct size
     for (int row = 0; row < cellsTall; row++) {
@@ -117,30 +139,106 @@ class Map
     for (int row = 0; row < cellsTall; row++) {
       for (int col = 0; col < cellsWide; col++) {
         int centerOffset = GRID_SIZE / 2;
-        int adjustedColPos = col * GRID_SIZE;
-        int adjustedRowPos = row * GRID_SIZE;
+        int adjustedColPos = col * GRID_SIZE;  // X position of left side of grid cell
+        int adjustedRowPos = row * GRID_SIZE;  // Y position of top side of grid cell
         PVector nodeCenter = new PVector(adjustedColPos + centerOffset, adjustedRowPos + centerOffset);
-        map.get(row).add(new Node(nodeCenter));
+
+        // Create walls bordering this node
+        Wall up = new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos));
+        Wall left = new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE));
+        Wall right = new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos));
+        Wall down = new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE));
         
-        // Add the walls, hashset will prevent duplicates
-        walls.add(new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos)));
-        walls.add(new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE)));
-        walls.add(new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos)));
-        walls.add(new Wall(new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos + GRID_SIZE), new PVector(adjustedColPos, adjustedRowPos + GRID_SIZE)));
+        
+        walls.addAll(new ArrayList<>(Arrays.asList(up, left, right, down))); // Add the walls, hashset will prevent duplicates
+
+        Node newNode = new Node(nodeCenter, new ArrayList<>(Arrays.asList(up, left, right, down))); // Create node and tell it which walls it has
+
+        map.get(row).add(newNode); // Add node to map
+        
+        coordsToNode.put(nodeCenter, newNode); // Add node to hashmap
       }
     }
 
-    //
+
+    /*
+     Maze Generation using Prim's Algorithm
+     */
     
-    ArrayList<Wall> wallFrontier = new ArrayList<Wall>(); // TODO: figure out how to populate
-    //for (int row = 0; row < cellsTall; row++) {
-    //  for (int col = 0; col < cellsWide; col++) {
-    //    Node curr = map.get(row).get(col);
-    //  }
-    //}
-    
-    
-    int startCell = rand.nextInt(cellsWide * cellsTall);
+    // Setup start node
+    Node startNode = map.get(rand.nextInt(cellsTall)).get(rand.nextInt(cellsWide));  // The node we will start with
+    startNode.visit();                                                               // Declare our start node visited
+
+    // Setup frontier
+    Set<Wall> wallFrontier = new HashSet<Wall>();  // Our frontier of walls
+    wallFrontier.addAll(startNode.getWalls());     // Add the start nodes walls to the frontier
+
+    // While there are unvisited nodes in the map
+    while (map.stream().flatMap(row -> row.stream()).filter(n -> n.visited == false).collect(Collectors.toList()).size() > 0) {
+      wallFrontier = pruneWallFrontier(wallFrontier); // Prune the frontier to exclude border walls and walls we can no longer remove
+
+      // Find a valid wall
+      Wall chosenWall = new ArrayList<>(wallFrontier).get(rand.nextInt(wallFrontier.size())); // Choose a wall from the frontier
+      ArrayList<Node> wallNeighbors = getWallNodes(chosenWall, coordsToNode);                 // Get the neighbors of the wall
+
+      // Get our new node and visit it
+      Node freshlyVisitedNode = wallNeighbors.get(0).visited ? wallNeighbors.get(1) : wallNeighbors.get(0); // Figure out which neighbor of the wall we haven't visited yet
+      freshlyVisitedNode.visit();  // Visit the neighbor
+
+      wallFrontier.addAll(freshlyVisitedNode.getWalls());      // Add the new node's walls to frontier
+      wallFrontier.remove(chosenWall); // Remove the wall we came from. Because wallFrontier is a set, we don't have to worry about the wall we added above being duplicate
+      walls.remove(chosenWall);  // Remove the wall from our map
+      
+      Node.associate(wallNeighbors.get(0), wallNeighbors.get(1));  // Associate the nodes to each other now that the wall is gone
+    }
+  }
+
+  // Get the nodes a wall seperates
+  ArrayList<Node> getWallNodes(Wall wall, HashMap<PVector, Node> coordsToNode) {
+    // Figure out if the wall is vertical or horizontal
+    boolean verticalWall = Float.compare(wall.normal.x, 0.0) != 0 ;
+    boolean horizontalWall = Float.compare(wall.normal.y, 0.0) != 0 ;
+
+
+    // Find center of the nodes we're looking for
+    PVector node1Coord = null;
+    PVector node2Coord = null;
+
+    if (horizontalWall) {
+      //println("wall " + wall.center() + " is h");
+      node1Coord = PVector.sub(wall.center(), new PVector(0, GRID_SIZE / 2));
+      node2Coord = PVector.add(wall.center(), new PVector(0, GRID_SIZE / 2));
+    } else if (verticalWall) {
+      //println("wall " + wall.center() + " is v");
+      node1Coord = PVector.sub(wall.center(), new PVector(GRID_SIZE / 2, 0));
+      node2Coord = PVector.add(wall.center(), new PVector(GRID_SIZE / 2, 0));
+    } else {
+      // Floating point number comparison is oh so fun
+      println("PAIN PAIN PAIN");
+      println(wall.normal);
+    }
+
+    // Find nodes based on their center
+    Node node1 = coordsToNode.get(node1Coord);
+    Node node2 = coordsToNode.get(node2Coord);
+
+    return new ArrayList<>(Arrays.asList(node1, node2));
+  }
+
+  Set<Wall> pruneWallFrontier(Set<Wall> walls) {
+    // Prune the wallFrontier to exclude borders. Filter wallFrontier to only include walls which have two non null node neighbors
+    Set<Wall> prunedWalls = walls.stream().filter(
+      wall -> getWallNodes(wall, coordsToNode).stream().filter(
+      node -> node != null).collect(Collectors.toList())
+      .size() == 2).collect(Collectors.toSet());
+
+    // Prune the wallFrontier to exclude walls we can not remove. Filter wallFrontier to only include walls which have 1 visited and 1 non-visited node
+    prunedWalls = prunedWalls.stream().filter(
+      wall -> getWallNodes(wall, coordsToNode).stream().filter(
+      node -> node.visited).collect(Collectors.toList())
+      .size() == 1).collect(Collectors.toSet());
+
+    return prunedWalls;
   }
 
   void update(float dt)
@@ -158,15 +256,20 @@ class Map
     }
 
     stroke(255, 0, 0);
-    for (ArrayList<Node> row : map) {
-      for (Node n : row) {
-         circle(n.center.x, n.center.y, 10);
-      }
-    }
+    //for (ArrayList<Node> row : map) {
+    //  for (Node n : row) {
+    //    circle(n.center.x, n.center.y, 10);
+    //  }
+    //}
     
-    for (Wall wall : walls) {
-       wall.draw(); 
+    stroke(255, 0, 0);
+    for(Node n : map.stream().flatMap(row -> row.stream()).collect(Collectors.toList())){
+        circle(n.center.x, n.center.y, 5);
+        for(Node neighbor : n.neighbors) {
+            line(n.center.x, n.center.y, neighbor.center.x, neighbor.center.y);
+        }
     }
-    println(walls.size());
+
+
   }
 }
