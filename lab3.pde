@@ -24,6 +24,9 @@ void keyPressed()
   if (key == 'g')
   {
     map.generate(rand.nextInt());
+    if(billy.target != null) {
+       billy.seek(billy.target);
+    }
   } else if (key == 'n')
   {
     show_graph = !show_graph;
