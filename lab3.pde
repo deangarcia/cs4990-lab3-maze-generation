@@ -28,7 +28,7 @@ void keyPressed()
     
     // If billy is currently seeking a target, call seek again to recalculate the path to the target since the maze has changed
     if(billy.target != null) {
-       billy.seek(billy.target);
+       billy.seek(billy.flightPlan.getLastTarget());
     }
   } else if (key == 'n')
   {
