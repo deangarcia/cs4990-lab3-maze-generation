@@ -8,7 +8,7 @@ int lastt;
 Random rand = new Random();
 Map map = new Map();
 boolean show_graph = false;
-boolean auto_run = false;
+boolean auto_run = false; 
 Boid billy;
 
 void setup() {
@@ -21,9 +21,12 @@ void setup() {
 
 void keyPressed()
 {
+  // Generate new map
   if (key == 'g')
   {
-    map.generate(rand.nextInt());
+    map.generate(rand.nextInt()); // Regenerate the map with a random seed
+    
+    // If billy is currently seeking a target, call seek again to recalculate the path to the target since the maze has changed
     if(billy.target != null) {
        billy.seek(billy.target);
     }
@@ -58,6 +61,7 @@ void draw() {
     }
   }
   
+  // If we want to auto run and billy doesn't have a target anymore, find another target
   if (auto_run && billy.target == null) {
      billy.seek(map.getRandomNode().center); 
   }

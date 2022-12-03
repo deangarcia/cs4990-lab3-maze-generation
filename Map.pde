@@ -1,4 +1,4 @@
-import java.util.Random; //<>// //<>//
+import java.util.Random; //<>// //<>// //<>//
 import java.util.Objects;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -66,16 +66,17 @@ class Wall
 
 static class Node
 {
-  PVector center;
-  boolean visited = false;
-  ArrayList<Node> neighbors = new ArrayList<Node>();
-  ArrayList<Wall> walls = new ArrayList<>();
+  PVector center;                                      // The center of the cell
+  boolean visited = false;                              // Has the cell been visited yet?
+  ArrayList<Node> neighbors = new ArrayList<Node>();    // Which nodes does this node neighbor?
+  ArrayList<Wall> walls = new ArrayList<>();            // Which walls surround this node
 
   Node(PVector center, ArrayList<Wall> walls) {
     this.center = center;
     this.walls = walls;
   }
 
+  // Simple mutator, set visited to true
   public void visit() {
     this.visited = true;
   }
@@ -85,12 +86,13 @@ static class Node
     neighbors.add(neighbor);
   }
 
-  // Have two nodes add each other as neighbors
+  // Static method to have two nodes add each other as neighbors
   static void associate(Node a, Node b) {
     a.addNeighbor(b);
     b.addNeighbor(a);
   }
 
+  // Get this nodes neighbors
   public ArrayList<Wall> getWalls() {
     return this.walls;
   }
@@ -99,18 +101,15 @@ static class Node
 
 class Map
 {
-  HashSet<Wall> walls;
-  ArrayList<Node> nodes;
-  ArrayList<ArrayList<Node>> map;
-  int cellsWide;
-  int cellsTall;
+  HashSet<Wall> walls;                  // The walls of the map
+  ArrayList<ArrayList<Node>> map;      // 2D arraylist of the nodes
+  int cellsWide, cellsTall;              // Dimensions of the maze
   HashMap<PVector, Node> coordsToNode;  // Hashmap that can be used to find a node from it's center position
 
   Map()
   {
 
     walls = new HashSet<Wall>();
-    nodes = new ArrayList<Node>();
     coordsToNode = new HashMap<PVector, Node>();
   }
 
@@ -118,22 +117,18 @@ class Map
 
   void generate(int which)
   {
-    cellsWide = width / GRID_SIZE;
-    cellsTall = height / GRID_SIZE;
-
-
-    walls.clear();
-
-    Random rand = new Random(which);
+    cellsWide = width / GRID_SIZE;  // Calculate the width of the map
+    cellsTall = height / GRID_SIZE;  // Calculate the height of the map
+    Random rand = new Random(which); // Create a random object
 
     /**
      Initialize Node Map
      **/
-    map = new ArrayList<ArrayList<Node>>();
+    map = new ArrayList<ArrayList<Node>>();    
     coordsToNode = new HashMap<PVector, Node>();
     walls = new HashSet<Wall>();
 
-    // Initialize map to the correct size
+    // Initialize map with the correct dimensions
     for (int row = 0; row < cellsTall; row++) {
       map.add(new ArrayList<Node>(cellsWide));
     }
@@ -141,10 +136,10 @@ class Map
     // Populate map with nodes
     for (int row = 0; row < cellsTall; row++) {
       for (int col = 0; col < cellsWide; col++) {
-        int centerOffset = GRID_SIZE / 2;
+        int centerOffset = GRID_SIZE / 2;      // Calculate the offset from the side of a cell to the center of the cell
         int adjustedColPos = col * GRID_SIZE;  // X position of left side of grid cell
         int adjustedRowPos = row * GRID_SIZE;  // Y position of top side of grid cell
-        PVector nodeCenter = new PVector(adjustedColPos + centerOffset, adjustedRowPos + centerOffset);
+        PVector nodeCenter = new PVector(adjustedColPos + centerOffset, adjustedRowPos + centerOffset);  // The center of this node cell
 
         // Create walls bordering this node
         Wall up = new Wall(new PVector(adjustedColPos, adjustedRowPos), new PVector(adjustedColPos + GRID_SIZE, adjustedRowPos));
@@ -159,7 +154,7 @@ class Map
 
         map.get(row).add(newNode); // Add node to map
 
-        coordsToNode.put(nodeCenter, newNode); // Add node to hashmap
+        coordsToNode.put(nodeCenter, newNode); // Add node to hashmap so we can find this node from it's center
       }
     }
 
@@ -168,12 +163,12 @@ class Map
      Maze Generation using Prim's Algorithm
      */
 
-    // Setup start node
+    // Choose a random node to start from
     Node startNode = map.get(rand.nextInt(cellsTall)).get(rand.nextInt(cellsWide));  // The node we will start with
     startNode.visit();                                                               // Declare our start node visited
 
     // Setup frontier
-    Set<Wall> wallFrontier = new HashSet<Wall>();  // Our frontier of walls
+    Set<Wall> wallFrontier = new HashSet<Wall>();  // Our frontier of walls that tracks which ones we can remove
     wallFrontier.addAll(startNode.getWalls());     // Add the start nodes walls to the frontier
 
     // While there are unvisited nodes in the map
@@ -182,21 +177,26 @@ class Map
 
       // Find a valid wall
       Wall chosenWall = new ArrayList<>(wallFrontier).get(rand.nextInt(wallFrontier.size())); // Choose a wall from the frontier
-      ArrayList<Node> wallNeighbors = getWallNodes(chosenWall, coordsToNode);                 // Get the neighbors of the wall
+      ArrayList<Node> wallNeighbors = getWallNodes(chosenWall, coordsToNode);                 // Get the node neighbors of the wall
 
       // Get our new node and visit it
       Node freshlyVisitedNode = wallNeighbors.get(0).visited ? wallNeighbors.get(1) : wallNeighbors.get(0); // Figure out which neighbor of the wall we haven't visited yet
       freshlyVisitedNode.visit();  // Visit the neighbor
 
-      wallFrontier.addAll(freshlyVisitedNode.getWalls());      // Add the new node's walls to frontier
-      wallFrontier.remove(chosenWall); // Remove the wall we came from. Because wallFrontier is a set, we don't have to worry about the wall we added above being duplicate
-      walls.remove(chosenWall);  // Remove the wall from our map
+      wallFrontier.addAll(freshlyVisitedNode.getWalls());      // Add the new node's walls to frontier. Because wallFrontier is a set, we don't have to worry about any of the walls we add being duplicates
+      wallFrontier.remove(chosenWall); // Remove the wall we came from from the frontier
+      walls.remove(chosenWall);  // Remove the wall from our final map
 
       Node.associate(wallNeighbors.get(0), wallNeighbors.get(1));  // Associate the nodes to each other now that the wall is gone
     }
   }
 
-  // Get the nodes a wall seperates
+
+  /*
+    A wall separates two nodes, this method can be used to find the two nodes a given wall separates
+    It takes the given wall and a hashmap that maps from node centers to the corresponding node
+    It returns an arraylist containing the neighbor nodes
+  */
   ArrayList<Node> getWallNodes(Wall wall, HashMap<PVector, Node> coordsToNode) {
     // Figure out if the wall is vertical or horizontal
     boolean verticalWall = Float.compare(wall.normal.x, 0.0) != 0 ;
@@ -221,13 +221,17 @@ class Map
       println(wall.normal);
     }
 
-    // Find nodes based on their center
+    // Find nodes based on their center. If no node is found at that position (the wall is a border wall) it will return null
     Node node1 = coordsToNode.get(node1Coord);
     Node node2 = coordsToNode.get(node2Coord);
 
     return new ArrayList<>(Arrays.asList(node1, node2));
   }
-
+  
+  /*
+    Method to prune the wall frontier by removing walls we can't consider for removal (walls on the border or walls we can't remove without creating a cycle)
+    Takes in a set of walls and returns a set of walls
+  */
   Set<Wall> pruneWallFrontier(Set<Wall> walls) {
     // Prune the wallFrontier to exclude borders. Filter wallFrontier to only include walls which have two non null node neighbors
     Set<Wall> prunedWalls = walls.stream().filter(
@@ -244,46 +248,57 @@ class Map
     return prunedWalls;
   }
 
+  // Method to get a random node from the map
   Node getRandomNode() {
     return map.get(rand.nextInt(cellsTall)).get(rand.nextInt(cellsWide));
   }
 
+  // Method to get a node based on it's index in the map
+  // Not currently used
   Node getNode(int i, int j) {
     i = constrain(i, 0, cellsTall - 1);
     j = constrain(j, 0, cellsWide - 1);
     return map.get(i).get(j);
   }
 
+  // Method to return the node closest to a given point on the screen
   Node getNodeClosestToPoint(PVector point) {
+    // Stream the map and sort it by distance to point, then get the closest one
     return map.stream().flatMap(row -> row.stream()).sorted((n1, n2) -> Float.valueOf(PVector.dist(n1.center, point)).compareTo(PVector.dist(n2.center, point))).collect(Collectors.toList()).get(0);
   }
 
+  // A* path finding algorithm
+  // Takes in the starting node and ending node
+  // Returns a path of PVectors (the node centers) to the goal
   ArrayList<PVector> aStar(Node start, Node goal) {
-    HashMap<Node, Float> costs = new HashMap<>();
+    HashMap<Node, Float> costs = new HashMap<>();  // Track costs
     costs.put(start, 0.0);
-    HashMap<Node, Node> previous = new HashMap<>();
-    PriorityQueue<QueueItem> queue = new PriorityQueue<QueueItem>(new QueueItemComparator());
+    HashMap<Node, Node> previous = new HashMap<>();  // Track how we reached a node
+    PriorityQueue<QueueItem> queue = new PriorityQueue<QueueItem>(new QueueItemComparator());  // The queue
     queue.add(new QueueItem(start, 0, 0 + PVector.dist(start.center, goal.center)));
-
+    
+    // While there are nodes
     while (queue.size() > 0) {
       QueueItem curr_qi = queue.poll();
       Node curr_node = curr_qi.node;
+      
+      
       if (curr_node.center.equals(goal.center)) {
-        break;
+        break; // If we've found our goal, break
       } else {
         for (Node neighbor : curr_node.neighbors) {
-          Float new_neighbor_weight = costs.get(curr_node) + 1;
+          Float new_neighbor_weight = costs.get(curr_node) + 1; // The actual weight of reaching the node
 
           if (!costs.containsKey(neighbor) || new_neighbor_weight < costs.get(neighbor)) {
             costs.put(neighbor, new_neighbor_weight);
             previous.put(neighbor, curr_node);
-            queue.add(new QueueItem(neighbor, 1, 1 + PVector.dist(neighbor.center, goal.center)));
+            queue.add(new QueueItem(neighbor, new_neighbor_weight, PVector.dist(neighbor.center, goal.center)));
           }
         }
       }
     }
 
-
+    // Backtrack to find our path
     ArrayList<PVector> waypoints = new ArrayList<PVector>();
     waypoints.add(goal.center);
     Node temp = goal;
@@ -292,25 +307,28 @@ class Map
       temp = previous.get(temp);
     }
     Collections.reverse(waypoints);
-    return minimizePath(waypoints);
+    return minimizePath(waypoints); // Prune the waypoints a bit
   }
 
+  // Method to prune the returned astar path minimally.
+  // Removes any waypoints that are in a straight line from the previous and next waypoints
+  // Returns a list of waypoints where waypoints only exist at the start, corners, and end
   ArrayList<PVector> minimizePath(ArrayList<PVector> path) {
     ArrayList<PVector> prunedPath = new ArrayList<>();
-    prunedPath.add(path.get(0));
+    prunedPath.add(path.get(0));  // Add the first waypoint
     if (path.size() > 2) {
       for (int i = 1; i < path.size() - 1; i++) {
         PVector prev = path.get(i - 1);
         PVector curr = path.get(i);
         PVector next = path.get(i + 1);
 
-
+        // If this waypoint doesn't share the same x value with the previous and next or it doesn't share the y value with previous and next, include it
         if (!(Float.valueOf(prev.x).equals(curr.x) && Float.valueOf(curr.x).equals(next.x)) && !(Float.valueOf(prev.y).equals(curr.y) && Float.valueOf(curr.y).equals(next.y))) {
           prunedPath.add(curr);
         }
       }
     }
-    prunedPath.add(path.get(path.size() - 1));
+    prunedPath.add(path.get(path.size() - 1)); // Add the last waypoint
     return prunedPath;
   }
 
