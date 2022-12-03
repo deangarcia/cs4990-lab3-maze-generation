@@ -136,7 +136,7 @@ class Map
     // Populate map with nodes
     for (int row = 0; row < cellsTall; row++) {
       for (int col = 0; col < cellsWide; col++) {
-        int centerOffset = GRID_SIZE / 2;      // Calculate the offset from the side of a cell to the center of the cell
+        float centerOffset = (float) GRID_SIZE / 2;      // Calculate the offset from the side of a cell to the center of the cell
         int adjustedColPos = col * GRID_SIZE;  // X position of left side of grid cell
         int adjustedRowPos = row * GRID_SIZE;  // Y position of top side of grid cell
         PVector nodeCenter = new PVector(adjustedColPos + centerOffset, adjustedRowPos + centerOffset);  // The center of this node cell
@@ -158,7 +158,7 @@ class Map
       }
     }
 
-
+    
     /*
      Maze Generation using Prim's Algorithm
      */
@@ -209,12 +209,12 @@ class Map
 
     if (horizontalWall) {
       //println("wall " + wall.center() + " is h");
-      node1Coord = PVector.sub(wall.center(), new PVector(0, GRID_SIZE / 2));
-      node2Coord = PVector.add(wall.center(), new PVector(0, GRID_SIZE / 2));
+      node1Coord = PVector.sub(wall.center(), new PVector(0, (float) GRID_SIZE / 2));
+      node2Coord = PVector.add(wall.center(), new PVector(0, (float) GRID_SIZE / 2));
     } else if (verticalWall) {
       //println("wall " + wall.center() + " is v");
-      node1Coord = PVector.sub(wall.center(), new PVector(GRID_SIZE / 2, 0));
-      node2Coord = PVector.add(wall.center(), new PVector(GRID_SIZE / 2, 0));
+      node1Coord = PVector.sub(wall.center(), new PVector((float) GRID_SIZE / 2, 0));
+      node2Coord = PVector.add(wall.center(), new PVector((float) GRID_SIZE / 2, 0));
     } else {
       // Floating point number comparison is oh so fun
       println("PAIN PAIN PAIN");
@@ -348,7 +348,7 @@ class Map
 
     //for (ArrayList<Node> row : map) {
     //  for (Node n : row) {
-    //    circle(n.center.x, n.center.y, 10);
+    //    text("" + n.center, n.center.x, n.center.y);
     //  }
     //}
   }
