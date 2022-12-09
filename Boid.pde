@@ -51,7 +51,7 @@ class Boid
       // General variables about the frame/settings
       final int SLOW_SPEED = 5;
       final int SLOW_RADIUS = 30; // The radius around the goal that we want to start slowing down in. Arbitrarily chosen
-      final int END_RADIUS = 10;  // The radius around the goal that we consider as within the goal. Arbitrarily chosen
+      final int END_RADIUS = 5;  // The radius around the goal that we consider as within the goal. Arbitrarily chosen
       float frame_max_acceleration = this.acceleration * dt;  // The maximum amount of acceleration we can do this frame
       float frame_rot_acceleration = this.rotational_acceleration * dt;  // The maximum amount of rotational acceleration we can do this frame
 
@@ -63,7 +63,7 @@ class Boid
 
       // Visible elements drawn on the screen for more understanding
       fill(255, 153);
-      circle(target.x, target.y, 2*SLOW_RADIUS);    // Draw the slowing radius
+      //circle(target.x, target.y, 2*SLOW_RADIUS);    // Draw the slowing radius
       fill(255, 100);
       circle(target.x, target.y, 2*END_RADIUS);     // Draw the goal radius
       line(kinematic.position.x, kinematic.position.y, target.x, target.y); // Draw line from boid to target
@@ -188,7 +188,8 @@ class Boid
     triangle(xp, yp, x1p, y1p, x2p, y2p);
     
     if (this.target != null) {
-       circle(this.flightPlan.getLastTarget().x, this.flightPlan.getLastTarget().y, 20); 
+      stroke(255, 0, 0);
+       circle(this.flightPlan.getLastTarget().x, this.flightPlan.getLastTarget().y, 5); 
     }
   }
 
@@ -249,11 +250,11 @@ class FlightPlan {
       }
       Path prevPath = this.paths.get(this.paths.indexOf(currPath) - 1);
 
-      println(180 - degrees(PVector.angleBetween(prevPath.getPath(), currPath.getPath())));
+      //println(180 - degrees(PVector.angleBetween(prevPath.getPath(), currPath.getPath())));
       float corner_angle = 180 - degrees(PVector.angleBetween(prevPath.getPath(), currPath.getPath())); // Find the inner angle of the corner
       float hard_cap = constrain(sqrt(2*1*currPath.getDistance()), 0, BILLY_MAX_SPEED);        // Hard cap on the speed of the corner. Figure out the theoretical maximum speed we could be going at this corner and still come to a dead stop at the next waypoint. Constrain to the boids max movement speed as well
       float corner_speed = map(corner_angle, 0, 180, 0, hard_cap);        // Limit the speed based on the angle of the corner. If the angle is a straight through 180 degrees allow full speed, if an about face then come to a complete stop. Interpolate between the two. The main purpose of this is to avoid overshoot on a tighter angle
-      println("corner_speed: " + corner_speed);
+      //println("corner_speed: " + corner_speed);
 
       // Set corresponding start and end speeds
       prevPath.setEndSpeed(corner_speed);
@@ -497,7 +498,7 @@ class Path {
     }
 
     this.max_speed = temp_speed;
-    println("max_speed: " + temp_speed);
+    //println("max_speed: " + temp_speed);
 
     this.t_of_highest_speed = findHighestPoint().x;
   }

@@ -33,8 +33,10 @@ void keyPressed()
   } else if (key == 'n')
   {
     show_graph = !show_graph;
+    println("Graph " + (show_graph ? "displayed" : "not displayed"));
   } else if( key == 'r') {
       auto_run = !auto_run;
+      println("Autorun " + (auto_run ? "enabled" : "disabled"));
   }
 }
 
