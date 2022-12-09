@@ -1,4 +1,4 @@
-import java.util.Random; //<>// //<>// //<>//
+import java.util.Random; //<>// //<>// //<>// //<>//
 import java.util.Objects;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -117,6 +117,9 @@ class Map
 
   void generate(int which)
   {
+    long startTime = System.currentTimeMillis();
+
+    
     cellsWide = width / GRID_SIZE;  // Calculate the width of the map
     cellsTall = height / GRID_SIZE;  // Calculate the height of the map
     Random rand = new Random(which); // Create a random object
@@ -189,6 +192,8 @@ class Map
 
       Node.associate(wallNeighbors.get(0), wallNeighbors.get(1));  // Associate the nodes to each other now that the wall is gone
     }
+    
+    println("Map generated in " + (float) (System.currentTimeMillis() - startTime) / 1000 + " seconds");
   }
 
 
@@ -307,7 +312,7 @@ class Map
       temp = previous.get(temp);
     }
     Collections.reverse(waypoints);
-    return minimizePath(waypoints); // Prune the waypoints a bit
+    return waypoints; // Prune the waypoints a bit
   }
 
   // Method to prune the returned astar path minimally.
